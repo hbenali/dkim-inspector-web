@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DKIM · record inspector & validator</title>
+  
+  <!-- SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <meta name="theme-color" content="#4a2f6b">
+  
+  <!-- modern clean CSS -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #f5f0ff 0%, #eee9fa 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      color: #1a2639;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(60, 20, 100, 0.25), inset 0 1px 2px rgba(255,255,255,0.8);
+      width: 100%;
+      max-width: 1000px;
+      padding: 2.5rem 2rem;
+      border: 1px solid rgba(255,255,255,0.5);
+      transition: box-shadow 0.2s;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #4a2f6b, #6b3f7c);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .subhead {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #5a4e77;
+      margin-bottom: 1.8rem;
+      border-left: 3px solid #8a5bd5;
+      padding-left: 1rem;
+      background: rgba(90, 75, 140, 0.06);
+      border-radius: 0 8px 8px 0;
+    }
+
+    .subhead code {
+      background: #2f1e5e10;
+      padding: 0.2rem 0.5rem;
+      border-radius: 30px;
+      font-weight: 500;
+      color: #4a1e72;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      font-weight: 550;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      color: #4a1e6b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label i {
+      font-style: normal;
+      background: #e4d9ff;
+      padding: 2px 8px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      color: #4a305c;
+    }
+
+    .domain-input-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    #domainInput {
+      flex: 1 1 260px;
+      padding: 1rem 1.4rem;
+      font-size: 1.1rem;
+      background: white;
+      border: 2px solid rgba(100, 75, 200, 0.2);
+      border-radius: 60px;
+      outline: none;
+      font-weight: 450;
+      color: #2a0b3b;
+      transition: 0.15s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    #domainInput:focus {
+      border-color: #7a5bd5;
+      box-shadow: 0 8px 18px -8px rgba(100, 75, 200, 0.3);
+    }
+
+    #domainInput::placeholder {
+      color: #ab9bc7;
+      font-weight: 350;
+      font-size: 1rem;
+    }
+
+    .selector-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+
+    #selectorInput {
+      flex: 0 1 200px;
+      padding: 0.8rem 1.2rem;
+      font-size: 1rem;
+      background: white;
+      border: 2px solid rgba(100, 75, 200, 0.2);
+      border-radius: 60px;
+      outline: none;
+      font-weight: 450;
+      color: #2a0b3b;
+    }
+
+    #selectorInput:focus {
+      border-color: #7a5bd5;
+    }
+
+    .selector-help {
+      font-size: 0.9rem;
+      color: #6a5e8a;
+      background: #f0e9ff;
+      padding: 0.5rem 1rem;
+      border-radius: 40px;
+    }
+
+    button {
+      background: #4a2f6b;
+      border: none;
+      padding: 1rem 2.3rem;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 12px 22px -10px #4a2f6b;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: #3a1f5b;
+      transform: scale(1.02);
+      box-shadow: 0 18px 28px -10px #3a1f5b;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(0.3);
+    }
+
+    .loader {
+      display: inline-block;
+      width: 1.1rem;
+      height: 1.1rem;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .result-area {
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      padding: 1.8rem 1.8rem 1.8rem 2rem;
+      border: 1px solid white;
+      margin-top: 1rem;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 8px 14px -12px #2a1e5e;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .result-header h2 {
+      font-size: 1.3rem;
+      font-weight: 550;
+      color: #2a1b51;
+    }
+
+    .badge-domain {
+      background: #e2d0ff;
+      border-radius: 40px;
+      padding: 0.3rem 1rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-weight: 550;
+      font-size: 1rem;
+      color: #2a123d;
+      word-break: break-all;
+      border: 1px solid white;
+    }
+
+    .record-card {
+      background: white;
+      border-radius: 30px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 10px -6px #2a1e6b30;
+      border-left: 6px solid #7a5bd5;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.95rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .record-meta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #f0e9ff;
+    }
+
+    .meta-item {
+      background: #f0e9ff;
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      color: #3a2a5a;
+    }
+
+    .validation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      font-weight: 500;
+    }
+
+    .valid {
+      background: #e1f7e1;
+      color: #1a6b1a;
+    }
+
+    .invalid {
+      background: #ffe1e1;
+      color: #a13030;
+    }
+
+    .warning {
+      background: #fff4e1;
+      color: #b45b1a;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .tag {
+      background: #e9e0ff;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-family: monospace;
+    }
+
+    .tag-key {
+      font-weight: 600;
+      color: #4a2f6b;
+    }
+
+    .tag-value {
+      color: #1a1a3a;
+    }
+
+    .empty-state {
+      background: #f8f4ff;
+      padding: 2rem 2rem;
+      border-radius: 2rem;
+      color: #5a4e77;
+      font-weight: 400;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      border: 2px dashed #d0bbff;
+      text-align: center;
+    }
+
+    .empty-state span {
+      font-size: 2.5rem;
+    }
+
+    .error-message {
+      background: #ffeae9;
+      border-left: 6px solid #d14545;
+      padding: 1.3rem 1.8rem;
+      border-radius: 40px;
+      color: #a13030;
+      font-weight: 480;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 6px 12px -6px #d1454530;
+    }
+
+    /* New styles for guide section */
+    .guide-section {
+      margin-top: 2.5rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .guide-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: white;
+      border: 2px solid #d0bbff;
+      padding: 0.8rem 1.5rem;
+      border-radius: 40px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4a2f6b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #4a2f6b;
+      color: white;
+      border-color: #4a2f6b;
+    }
+
+    .tab-btn:hover {
+      background: #e9d9ff;
+      border-color: #8a5bd5;
+    }
+
+    .tab-btn.active:hover {
+      background: #3a1f5b;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 1rem 0.5rem;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .guide-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border-left: 6px solid #8a5bd5;
+    }
+
+    .guide-card h3 {
+      color: #4a2f6b;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .code-block {
+      background: #1a1a2e;
+      color: #f0e9ff;
+      padding: 1.2rem;
+      border-radius: 1rem;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      margin: 1rem 0;
+    }
+
+    .command-line {
+      color: #8a5bd5;
+      font-weight: 600;
+    }
+
+    .comment {
+      color: #7a8b9c;
+    }
+
+    .recommendation-list {
+      list-style: none;
+    }
+
+    .recommendation-list li {
+      padding: 0.8rem 0;
+      border-bottom: 1px solid #f0e9ff;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .recommendation-list li:last-child {
+      border-bottom: none;
+    }
+
+    .rec-icon {
+      font-size: 1.2rem;
+      min-width: 2rem;
+    }
+
+    .rec-content {
+      flex: 1;
+    }
+
+    .rec-title {
+      font-weight: 600;
+      color: #4a2f6b;
+    }
+
+    .rec-desc {
+      font-size: 0.9rem;
+      color: #6a5e8a;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .tool-card {
+      background: #f8f4ff;
+      border-radius: 1.2rem;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .tool-card a {
+      color: #4a2f6b;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .tool-card a:hover {
+      text-decoration: underline;
+    }
+
+    .note {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #6a5e8a;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      border-top: 1px solid #ddd0fa;
+      padding-top: 1.5rem;
+    }
+
+    .note a {
+      color: #4a2f6b;
+      font-weight: 550;
+      text-decoration: none;
+      border-bottom: 1px dotted;
+    }
+
+    .note a:hover { border-bottom: 2px solid; }
+
+    footer {
+      margin-top: 2.2rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #7a6e9a;
+    }
+  </style>
+</head>
+<body>
+<div class="glass-card">
+  <h1>
+    <span>📧 DKIM · record inspector</span>
+  </h1>
+  <div class="subhead">
+    Check <strong>DomainKeys Identified Mail</strong> records — validate email authentication
+  </div>
+
+  <!-- main input group -->
+  <div class="input-group">
+    <label>
+      <span>Domain name</span>
+      <i>example.com</i>
+    </label>
+    <div class="domain-input-wrapper">
+      <input type="text" id="domainInput" placeholder="e.g. example.com" value="google.com" spellcheck="false" autocomplete="off">
+    </div>
+    
+    <label style="margin-top: 0.5rem;">
+      <span>Selector</span>
+      <i>google, selector1, default</i>
+    </label>
+    <div class="selector-wrapper">
+      <input type="text" id="selectorInput" placeholder="e.g. google" value="google">
+      <span class="selector-help">ⓘ Common: google, selector1, default, 2023</span>
+    </div>
+    
+    <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
+      <button id="checkBtn">
+        <span id="btnText">Check DKIM</span>
+        <span id="btnLoader" style="display: none;"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- dynamic result card -->
+  <div class="result-area" id="resultContainer">
+    <!-- default info / placeholder -->
+    <div class="empty-state" id="placeholderState">
+      <span>📧</span>
+      <div>Enter a domain and selector, then click "Check DKIM"<br> <span style="font-size:0.9rem;">DKIM records help verify email authenticity and prevent spoofing.</span></div>
+    </div>
+
+    <!-- these sections are dynamically filled -->
+    <div id="recordsContainer" style="display: none;"></div>
+    <div id="errorContainer" style="display: none;"></div>
+  </div>
+
+  <!-- DKIM explanation -->
+  <div class="note">
+    <span>🔐 DKIM = DomainKeys Identified Mail</span>
+    <span>📝 Format: <code>selector._domainkey.domain.com</code> TXT</span>
+    <span>⚡ Using Google DNS over HTTPS</span>
+  </div>
+
+  <!-- NEW: How to Generate DKIM Keys & Recommendations Section -->
+  <div class="guide-section">
+    <div class="guide-tabs">
+      <button class="tab-btn active" id="tabGenerate">🔑 Generate Keys</button>
+      <button class="tab-btn" id="tabRecommend">📋 Best Practices</button>
+      <button class="tab-btn" id="tabTools">🛠️ Tools & Resources</button>
+    </div>
+
+    <!-- Generate Keys Tab -->
+    <div class="tab-content active" id="generateTab">
+      <div class="guide-card">
+        <h3>🔑 Generate DKIM Keys with OpenSSL</h3>
+        <p style="margin-bottom: 1rem; color: #4a2f6b;">Generate a 2048-bit RSA key pair for DKIM:</p>
+        
+        <div class="code-block">
+          <span class="comment"># 1. Generate private key</span><br>
+          <span class="command-line">openssl genrsa -out dkim-private.pem 2048</span><br><br>
+          
+          <span class="comment"># 2. Extract public key (for DNS record)</span><br>
+          <span class="command-line">openssl rsa -in dkim-private.pem -pubout -outform PEM 2>/dev/null | grep -v "BEGIN" | grep -v "END" | tr -d '\n' | awk '{print "p=" $0}'</span><br><br>
+          
+          <span class="comment"># 3. Sample DKIM TXT record</span><br>
+          <span class="command-line">v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4xUT9...</span>
+        </div>
+
+        <p style="margin-top: 1rem; font-size: 0.95rem; color: #6a5e8a;">
+          ⚡ The public key (p= tag) goes in your DNS TXT record at: <code>selector._domainkey.yourdomain.com</code>
+        </p>
+      </div>
+
+      <div class="guide-card">
+        <h3>📊 Key Size Recommendations</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="border-bottom: 2px solid #f0e9ff;">
+            <th style="text-align: left; padding: 0.8rem 0;">Key Size</th>
+            <th style="text-align: left; padding: 0.8rem 0;">Security</th>
+            <th style="text-align: left; padding: 0.8rem 0;">DNS Record Size</th>
+            <th style="text-align: left; padding: 0.8rem 0;">Recommendation</th>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.8rem 0;">1024-bit</td>
+            <td style="padding: 0.8rem 0;">⚠️ Weak</td>
+            <td style="padding: 0.8rem 0;">~180 chars</td>
+            <td style="padding: 0.8rem 0;">❌ Avoid - deprecated</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.8rem 0;">2048-bit</td>
+            <td style="padding: 0.8rem 0;">✅ Strong</td>
+            <td style="padding: 0.8rem 0;">~350 chars</td>
+            <td style="padding: 0.8rem 0;">✅ Recommended</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.8rem 0;">3072-bit</td>
+            <td style="padding: 0.8rem 0;">🔒 Very Strong</td>
+            <td style="padding: 0.8rem 0;">~500 chars</td>
+            <td style="padding: 0.8rem 0;">👍 For high security</td>
+          </tr>
+        </table>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: #b45b1a;">
+          ⚠️ Note: DNS TXT records have a 512-byte limit. 4096-bit keys may exceed this limit.
+        </p>
+      </div>
+    </div>
+
+    <!-- Best Practices Tab -->
+    <div class="tab-content" id="recommendTab">
+      <div class="guide-card">
+        <h3>📋 DKIM Best Practices (2026)</h3>
+        <ul class="recommendation-list">
+          <li>
+            <span class="rec-icon">🔑</span>
+            <div class="rec-content">
+              <div class="rec-title">Use 2048-bit keys minimum</div>
+              <div class="rec-desc">1024-bit is considered weak and may be rejected by some receivers</div>
+            </div>
+          </li>
+          <li>
+            <span class="rec-icon">🔄</span>
+            <div class="rec-content">
+              <div class="rec-title">Rotate keys every 6-12 months</div>
+              <div class="rec-desc">Generate new keys and update DNS before expiring old ones</div>
+            </div>
+          </li>
+          <li>
+            <span class="rec-icon">📝</span>
+            <div class="rec-content">
+              <div class="rec-title">Use multiple selectors</div>
+              <div class="rec-desc">Maintain at least two selectors for smooth key rotation (e.g., selector1, selector2)</div>
+            </div>
+          </li>
+          <li>
+            <span class="rec-icon">⚙️</span>
+            <div class="rec-content">
+              <div class="rec-title">Include all required tags</div>
+              <div class="rec-desc">v=DKIM1, p=[public key] are mandatory. Add h=sha256 for better security</div>
+            </div>
+          </li>
+          <li>
+            <span class="rec-icon">🌐</span>
+            <div class="rec-content">
+              <div class="rec-title">Publish DKIM for all sending domains</div>
+              <div class="rec-desc">Even if you don't send much, it prevents impersonation</div>
+            </div>
+          </li>
+          <li>
+            <span class="rec-icon">📊</span>
+            <div class="rec-content">
+              <div class="rec-title">Monitor DKIM alignment with DMARC</div>
+              <div class="rec-desc">Use DMARC reports to ensure your DKIM is being validated</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="guide-card">
+        <h3>🔧 DKIM Tag Reference</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="border-bottom: 2px solid #f0e9ff;">
+            <th style="text-align: left; padding: 0.5rem;">Tag</th>
+            <th style="text-align: left; padding: 0.5rem;">Required</th>
+            <th style="text-align: left; padding: 0.5rem;">Description</th>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.5rem;"><code>v=</code></td>
+            <td style="padding: 0.5rem;">✅ Yes</td>
+            <td style="padding: 0.5rem;">Version - must be "DKIM1"</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.5rem;"><code>p=</code></td>
+            <td style="padding: 0.5rem;">✅ Yes</td>
+            <td style="padding: 0.5rem;">Public key (base64)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.5rem;"><code>k=</code></td>
+            <td style="padding: 0.5rem;">❌ No</td>
+            <td style="padding: 0.5rem;">Key type (rsa is default)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.5rem;"><code>h=</code></td>
+            <td style="padding: 0.5rem;">❌ No</td>
+            <td style="padding: 0.5rem;">Hash algorithms (sha256 recommended)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f0e9ff;">
+            <td style="padding: 0.5rem;"><code>s=</code></td>
+            <td style="padding: 0.5rem;">❌ No</td>
+            <td style="padding: 0.5rem;">Service type (email is default)</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.5rem;"><code>t=</code></td>
+            <td style="padding: 0.5rem;">❌ No</td>
+            <td style="padding: 0.5rem;">Flags (y=testing, s=strict)</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tools & Resources Tab -->
+    <div class="tab-content" id="toolsTab">
+      <div class="tool-grid">
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔧</div>
+          <a href="https://www.dkimcore.org/tools/" target="_blank">DKIM Core Tools</a>
+          <p style="font-size: 0.85rem; color: #6a5e8a; margin-top: 0.5rem;">Key generation and validation</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📨</div>
+          <a href="https://www.mail-tester.com/" target="_blank">Mail Tester</a>
+          <p style="font-size: 0.85rem; color: #6a5e8a; margin-top: 0.5rem;">Check your email authentication</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+          <a href="https://dmarcian.com/dkim-inspector/" target="_blank">DMARCIAN DKIM Inspector</a>
+          <p style="font-size: 0.85rem; color: #6a5e8a; margin-top: 0.5rem;">Advanced DKIM validation</p>
+        </div>
+        <div class="tool-card">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+          <a href="https://www.dmarcanalyzer.com/dkim/dkim-check/" target="_blank">DKIM Checker</a>
+          <p style="font-size: 0.85rem; color: #6a5e8a; margin-top: 0.5rem;">Alternative validation tool</p>
+        </div>
+      </div>
+
+      <div class="guide-card" style="margin-top: 1rem;">
+        <h3>📚 Command Line Tools</h3>
+        <div class="code-block">
+          <span class="comment"># Generate with OpenSSL (Linux/macOS)</span><br>
+          <span class="command-line">openssl genrsa -out private.pem 2048</span><br>
+          <span class="command-line">openssl rsa -in private.pem -pubout -out public.pem</span><br><br>
+          
+          <span class="comment"># Using Python (alternative)</span><br>
+          <span class="command-line">python3 -c "from Crypto.PublicKey import RSA; key = RSA.generate(2048); print(key.export_key().decode()); print(key.publickey().export_key().decode())"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    dkim.hbenali.ovh · validate email authentication records · guide v1.0
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // DOM elements
+    const domainInput = document.getElementById('domainInput');
+    const selectorInput = document.getElementById('selectorInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+    const resultContainer = document.getElementById('resultContainer');
+    const placeholderState = document.getElementById('placeholderState');
+    const recordsContainer = document.getElementById('recordsContainer');
+    const errorContainer = document.getElementById('errorContainer');
+
+    // Tab elements
+    const tabGenerate = document.getElementById('tabGenerate');
+    const tabRecommend = document.getElementById('tabRecommend');
+    const tabTools = document.getElementById('tabTools');
+    const generateTab = document.getElementById('generateTab');
+    const recommendTab = document.getElementById('recommendTab');
+    const toolsTab = document.getElementById('toolsTab');
+
+    // Tab switching
+    function switchTab(activeTab, activeContent) {
+      // Remove active class from all tabs
+      [tabGenerate, tabRecommend, tabTools].forEach(t => t.classList.remove('active'));
+      [generateTab, recommendTab, toolsTab].forEach(t => t.classList.remove('active'));
+      
+      // Add active class to selected tab and content
+      activeTab.classList.add('active');
+      activeContent.classList.add('active');
+    }
+
+    tabGenerate.addEventListener('click', () => switchTab(tabGenerate, generateTab));
+    tabRecommend.addEventListener('click', () => switchTab(tabRecommend, recommendTab));
+    tabTools.addEventListener('click', () => switchTab(tabTools, toolsTab));
+
+    // Helper to show/hide containers
+    function setActiveView(view) {
+      placeholderState.style.display = 'none';
+      recordsContainer.style.display = 'none';
+      errorContainer.style.display = 'none';
+      
+      if (view === 'placeholder') {
+        placeholderState.style.display = 'flex';
+      } else if (view === 'records') {
+        recordsContainer.style.display = 'block';
+      } else if (view === 'error') {
+        errorContainer.style.display = 'block';
+      }
+    }
+
+    // Initial state
+    setActiveView('placeholder');
+
+    // Parse DKIM record and extract tags
+    function parseDKIMRecord(record) {
+      const tags = [];
+      // Remove quotes and split by semicolons
+      let cleanRecord = record.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+      
+      // Split by semicolons but respect quoted strings
+      const parts = cleanRecord.split(';');
+      
+      for (let part of parts) {
+        part = part.trim();
+        if (!part) continue;
+        
+        const match = part.match(/^([a-zA-Z0-9]+)=(.+)$/);
+        if (match) {
+          tags.push({
+            key: match[1],
+            value: match[2].replace(/^"|"$/g, '') // Remove surrounding quotes
+          });
+        }
+      }
+      return tags;
+    }
+
+    // Validate DKIM record
+    function validateDKIM(tags) {
+      const validation = {
+        valid: true,
+        messages: [],
+        warnings: []
+      };
+
+      const tagMap = {};
+      tags.forEach(t => tagMap[t.key] = t.value);
+
+      // Check required v= tag
+      if (!tagMap.v) {
+        validation.valid = false;
+        validation.messages.push('Missing required "v=DKIM1" tag');
+      } else if (tagMap.v !== 'DKIM1') {
+        validation.valid = false;
+        validation.messages.push('Version must be "DKIM1"');
+      }
+
+      // Check for public key
+      if (!tagMap.p) {
+        validation.valid = false;
+        validation.messages.push('Missing public key (p= tag)');
+      } else if (tagMap.p === '') {
+        validation.warnings.push('Public key is empty (revoked)');
+      }
+
+      // Check key type
+      if (tagMap.k && tagMap.k !== 'rsa') {
+        validation.warnings.push(`Uncommon key type: ${tagMap.k}`);
+      }
+
+      // Check hash algorithms
+      if (tagMap.h) {
+        const hashes = tagMap.h.split(':');
+        if (hashes.includes('sha1')) {
+          validation.warnings.push('SHA-1 is deprecated for DKIM');
+        }
+      }
+
+      // Check service types
+      if (tagMap.s && tagMap.s !== '*') {
+        const services = tagMap.s.split(':');
+        if (!services.includes('email')) {
+          validation.warnings.push('Service type may not include email');
+        }
+      }
+
+      return validation;
+    }
+
+    // Render DKIM record with validation
+    function renderDKIMResult(domain, selector, record) {
+      const tags = parseDKIMRecord(record);
+      const validation = validateDKIM(tags);
+      
+      let tagsHtml = '';
+      tags.forEach(tag => {
+        tagsHtml += `
+          <span class="tag">
+            <span class="tag-key">${escapeHtml(tag.key)}</span>=<span class="tag-value">${escapeHtml(tag.value)}</span>
+          </span>
+        `;
+      });
+
+      let validationHtml = '';
+      if (validation.valid) {
+        validationHtml += `<span class="validation-badge valid">✅ Valid DKIM record</span>`;
+      } else {
+        validationHtml += `<span class="validation-badge invalid">❌ Invalid DKIM record</span>`;
+      }
+      
+      validation.messages.forEach(msg => {
+        validationHtml += `<span class="validation-badge invalid">⚠️ ${escapeHtml(msg)}</span>`;
+      });
+      
+      validation.warnings.forEach(warning => {
+        validationHtml += `<span class="validation-badge warning">⚠️ ${escapeHtml(warning)}</span>`;
+      });
+
+      const dkimDomain = `${selector}._domainkey.${domain}`;
+
+      recordsContainer.innerHTML = `
+        <div class="result-header">
+          <h2>📨 DKIM record for</h2>
+          <span class="badge-domain">${escapeHtml(dkimDomain)}</span>
+        </div>
+        
+        <div class="record-meta">
+          <span class="meta-item">📌 Selector: ${escapeHtml(selector)}</span>
+          <span class="meta-item">🌐 Domain: ${escapeHtml(domain)}</span>
+        </div>
+        
+        <div class="tag-list">
+          ${tagsHtml}
+        </div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0;">
+          ${validationHtml}
+        </div>
+        
+        <div class="record-card">
+          ${escapeHtml(record)}
+        </div>
+        
+        <div style="margin-top: 1rem; font-size:0.9rem; background: #f0e9ff; padding:1rem; border-radius:30px;">
+          <strong>📋 DNS lookup:</strong> ${escapeHtml(dkimDomain)} IN TXT
+        </div>
+      `;
+    }
+
+    // Escape HTML
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe.replace(/[&<>"]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        return m;
+      });
+    }
+
+    // Loading state
+    function setLoading(isLoading) {
+      checkBtn.disabled = isLoading;
+      btnText.textContent = isLoading ? 'Checking' : 'Check DKIM';
+      btnLoader.style.display = isLoading ? 'inline-block' : 'none';
+      btnLoader.className = isLoading ? 'loader' : '';
+    }
+
+    // DKIM lookup function
+    async function queryDKIM(domain, selector) {
+      let cleanDomain = domain.trim().replace(/\.+$/, '');
+      let cleanSelector = selector.trim().replace(/\.+$/, '');
+      
+      if (!cleanDomain) throw new Error('Please enter a domain');
+      if (!cleanSelector) throw new Error('Please enter a selector');
+      
+      // Construct DKIM domain: selector._domainkey.domain.com
+      const dkimDomain = `${cleanSelector}._domainkey.${cleanDomain}`;
+      
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(dkimDomain)}&type=TXT`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`DNS query failed (HTTP ${response.status})`);
+      
+      const data = await response.json();
+      
+      if (data.Status === 3) {
+        throw new Error(`No DKIM record found for "${dkimDomain}"`);
+      } else if (data.Status !== 0) {
+        const reason = data.Comment || `DNS error code ${data.Status}`;
+        throw new Error(`DNS lookup error: ${reason}`);
+      }
+      
+      const answers = data.Answer || [];
+      // Find TXT records (type 16)
+      const txtRecords = answers.filter(r => r.type === 16);
+      
+      if (txtRecords.length === 0) {
+        throw new Error(`No TXT records found for "${dkimDomain}"`);
+      }
+      
+      // Combine multiple strings if needed (DKIM records can be split)
+      let fullRecord = '';
+      txtRecords.forEach(r => {
+        if (r.data) {
+          // TXT data might be quoted, remove outer quotes
+          let txt = r.data.replace(/^"|"$/g, '');
+          fullRecord += txt;
+        }
+      });
+      
+      return {
+        domain: cleanDomain,
+        selector: cleanSelector,
+        dkimDomain: dkimDomain,
+        record: fullRecord,
+        raw: txtRecords
+      };
+    }
+
+    // Main lookup function
+    async function performLookup() {
+      const domain = domainInput.value.trim();
+      const selector = selectorInput.value.trim();
+      
+      if (!domain || !selector) {
+        setActiveView('error');
+        errorContainer.innerHTML = `
+          <div class="error-message">
+            <span style="font-size:2rem;">⚠️</span>
+            <div><strong>Missing information</strong><br>Please enter both domain and selector</div>
+          </div>
+        `;
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const result = await queryDKIM(domain, selector);
+        renderDKIMResult(result.domain, result.selector, result.record);
+        setActiveView('records');
+      } catch (err) {
+        errorContainer.innerHTML = `
+          <div class="error-message">
+            <span style="font-size:2rem;">⚠️</span>
+            <div><strong>Error checking DKIM</strong><br>${escapeHtml(err.message)}</div>
+          </div>
+        `;
+        setActiveView('error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Event listeners
+    checkBtn.addEventListener('click', performLookup);
+    
+    domainInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performLookup();
+    });
+    
+    selectorInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performLookup();
+    });
+
+    // Handle URL parameters
+    function handleUrlParameter() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const domainParam = urlParams.get('domain');
+      const selectorParam = urlParams.get('selector');
+      
+      if (domainParam) domainInput.value = domainParam;
+      if (selectorParam) selectorInput.value = selectorParam;
+      
+      if (domainParam && selectorParam) {
+        performLookup();
+      }
+    }
+
+    window.addEventListener('load', handleUrlParameter);
+  })();
+</script>
+</body>
+</html>
