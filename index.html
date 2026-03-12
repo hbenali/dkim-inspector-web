@@ -251,6 +251,7 @@
       border: 1px solid white;
     }
 
+    /* Improved record card with better handling for long keys */
     .record-card {
       background: white;
       border-radius: 30px;
@@ -259,10 +260,96 @@
       box-shadow: 0 4px 10px -6px #2a1e6b30;
       border-left: 6px solid #7a5bd5;
       font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       overflow-x: auto;
       white-space: pre-wrap;
       word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #8a5bd5 #f0e9ff;
+    }
+
+    .record-card::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .record-card::-webkit-scrollbar-track {
+      background: #f0e9ff;
+      border-radius: 10px;
+    }
+
+    .record-card::-webkit-scrollbar-thumb {
+      background: #8a5bd5;
+      border-radius: 10px;
+    }
+
+    /* New: Truncated key preview with expand button */
+    .key-preview {
+      background: #f8f4ff;
+      border-radius: 20px;
+      padding: 1rem;
+      margin: 1rem 0;
+      border: 2px dashed #d0bbff;
+    }
+
+    .key-truncated {
+      font-family: 'SF Mono', monospace;
+      font-size: 0.9rem;
+      color: #4a2f6b;
+      word-break: break-all;
+      max-height: 80px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .key-truncated::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, #f8f4ff);
+      pointer-events: none;
+    }
+
+    .key-full {
+      display: none;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.9rem;
+      color: #4a2f6b;
+      word-break: break-all;
+      margin: 1rem 0;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 15px;
+      border: 1px solid #e0d0ff;
+    }
+
+    .key-full.expanded {
+      display: block;
+    }
+
+    .expand-btn {
+      background: white;
+      border: 2px solid #8a5bd5;
+      color: #4a2f6b;
+      padding: 0.5rem 1.5rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .expand-btn:hover {
+      background: #8a5bd5;
+      color: white;
     }
 
     .record-meta {
@@ -319,6 +406,8 @@
       border-radius: 20px;
       font-size: 0.85rem;
       font-family: monospace;
+      word-break: break-all;
+      max-width: 100%;
     }
 
     .tag-key {
@@ -856,7 +945,7 @@
       // Remove quotes and split by semicolons
       let cleanRecord = record.replace(/^"|"$/g, '').replace(/\\"/g, '"');
       
-      // Split by semicolons but respect quoted strings
+      // Split by semicolons
       const parts = cleanRecord.split(';');
       
       for (let part of parts) {
@@ -931,13 +1020,27 @@
       const tags = parseDKIMRecord(record);
       const validation = validateDKIM(tags);
       
+      // Find the public key tag for special handling
+      const publicKeyTag = tags.find(t => t.key === 'p');
+      
       let tagsHtml = '';
       tags.forEach(tag => {
-        tagsHtml += `
-          <span class="tag">
-            <span class="tag-key">${escapeHtml(tag.key)}</span>=<span class="tag-value">${escapeHtml(tag.value)}</span>
-          </span>
-        `;
+        // For public key, show truncated version with expand option
+        if (tag.key === 'p' && tag.value.length > 100) {
+          const truncatedKey = tag.value.substring(0, 100) + '...';
+          tagsHtml += `
+            <span class="tag" style="max-width: 100%; background: #f0e4ff;">
+              <span class="tag-key">${escapeHtml(tag.key)}</span>=<span class="tag-value">${escapeHtml(truncatedKey)}</span>
+              <button class="expand-key-btn" style="background: none; border: none; color: #8a5bd5; cursor: pointer; font-size: 0.8rem; margin-left: 0.5rem;" onclick="alert('Full key:\n\n${escapeHtml(tag.value)}')">🔍</button>
+            </span>
+          `;
+        } else {
+          tagsHtml += `
+            <span class="tag">
+              <span class="tag-key">${escapeHtml(tag.key)}</span>=<span class="tag-value">${escapeHtml(tag.value)}</span>
+            </span>
+          `;
+        }
       });
 
       let validationHtml = '';
@@ -956,6 +1059,9 @@
       });
 
       const dkimDomain = `${selector}._domainkey.${domain}`;
+
+      // Format the full record with line breaks for better readability
+      const formattedRecord = record.replace(/;/g, ';\n');
 
       recordsContainer.innerHTML = `
         <div class="result-header">
@@ -977,7 +1083,7 @@
         </div>
         
         <div class="record-card">
-          ${escapeHtml(record)}
+          ${escapeHtml(formattedRecord)}
         </div>
         
         <div style="margin-top: 1rem; font-size:0.9rem; background: #f0e9ff; padding:1rem; border-radius:30px;">
