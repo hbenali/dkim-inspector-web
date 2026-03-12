@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dkim.hbenali.ovh/sitemap.xml
